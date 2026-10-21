@@ -86,5 +86,49 @@
     "confidence": 0.933,
     "frame_path": "C:\\Users\\soham\\Downloads\\DE Project\\data\\test_frames\\surface_squat.png",
     "status": "UPLOADED"
+  },
+  {
+    "timestamp": "2026-10-21 16:00:57",
+    "chainage_km": 0.25,
+    "latitude": 21.313452,
+    "longitude": 74.883817,
+    "gauge_mm": 1676.33,
+    "defect_name": "Missing Fastener (ERC)",
+    "confidence": 0.919,
+    "frame_path": "C:\\Users\\soham\\Downloads\\DE Project\\data\\test_frames\\missing_fastener.png",
+    "status": "UPLOADED"
+  },
+  {
+    "timestamp": "2026-10-21 16:00:58",
+    "chainage_km": 0.6,
+    "latitude": 21.316604,
+    "longitude": 74.887201,
+    "gauge_mm": 1676.23,
+    "defect_name": "Cracked Fishplate",
+    "confidence": 0.942,
+    "frame_path": "C:\\Users\\soham\\Downloads\\DE Project\\data\\test_frames\\cracked_fishplate.png",
+    "status": "UPLOADED"
+  },
+  {
+    "timestamp": "2026-10-21 16:00:58",
+    "chainage_km": 0.95,
+    "latitude": 21.31976,
+    "longitude": 74.890588,
+    "gauge_mm": 1676.07,
+    "defect_name": "Ballast Deficiency",
+    "confidence": 0.96,
+    "frame_path": "C:\\Users\\soham\\Downloads\\DE Project\\data\\test_frames\\ballast_deficiency.png",
+    "status": "UPLOADED"
+  },
+  {
+    "timestamp": "2026-10-21 16:00:59",
+    "chainage_km": 1.3,
+    "latitude": 21.322911,
+    "longitude": 74.893971,
+    "gauge_mm": 1676.12,
+    "defect_name": "Surface Squat / Rail Head Defect",
+    "confidence": 0.947,
+    "frame_path": "C:\\Users\\soham\\Downloads\\DE Project\\data\\test_frames\\surface_squat.png",
+    "status": "UPLOADED"
   }
 ]

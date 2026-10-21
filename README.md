@@ -1,11 +1,12 @@
 # TR-09: Indigenous Contactless Integrated Track Monitoring System (ITMS)
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![GUI](https://img.shields.io/badge/GUI-Native%20Tkinter%20%2B%20Matplotlib-success.svg)](https://docs.python.org/3/library/tkinter.html)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform: Edge-AI](https://img.shields.io/badge/Hardware-Jetson%20Orin%20Nano-green.svg)](https://www.nvidia.com/)
 [![Track Gauge](https://img.shields.io/badge/Indian%20Railways-Broad%20Gauge%20(1676mm)-orange.svg)](https://indianrailways.gov.in/)
 
-An open reference design and simulation framework for a hand-trolley-mounted contactless track inspector engineered specifically for Indian Railways branch lines. 
+A complete, working reference implementation and native desktop inspection software for a hand-trolley-mounted contactless track inspector engineered specifically for Indian Railways branch lines.
 
 Submitted as part of the **Design Experience** course at **Mukesh Patel School of Technology Management & Engineering (MPSTME), SVKM's NMIMS (Shirpur Campus)**.
 
@@ -13,7 +14,7 @@ Submitted as part of the **Design Experience** course at **Mukesh Patel School o
 
 ## 👥 Student Project Team & Mentorship
 
-- **Soham Bhosale** — *MBA Tech Computer Engineering (Hardware, Architecture, Cloud & Telemetry)*
+- **Soham Bhosale** — *MBA Tech Computer Engineering (Hardware, Architecture, Desktop GUI & Telemetry)*
 - **Arnav** — *MBA Tech Computer Engineering (ML Defect Model, Computer Vision)*
 - **Rudra Marathe** — *MBA Tech Computer Engineering (Field Operations, Documentation, Sensor Fusion)*
 - **Faculty Mentor:** **Prof. Chaitali Patil**
@@ -29,7 +30,7 @@ Indian Railways operates over 68,000 route kilometres. Around **19% of derailmen
 - **Strict Budget:** Hard parts budget capped at **₹1,35,000** using components sourced strictly from Indian distributors.
 - **Contactless Sensing:** Dual laser triangulation distance sensors, 9-axis MEMS IMU, sub-decimetre RTK-GNSS, and high-resolution cameras.
 - **Edge AI:** NVIDIA Jetson Orin Nano (9W, 17 TOPS) processing geometry fusion at 5 Hz and defect detection at 8.2 ms per frame.
-- **Telemetry:** Real-time cellular telemetry (< 4s update) with 32 GB local offline buffer and automatic backfill.
+- **Native Software:** Complete standalone Python Desktop Application with real-time dials, live track profile charts, camera defect overlay, and local CSV/JSON buffering.
 
 ---
 
@@ -56,43 +57,36 @@ Indian Railways operates over 68,000 route kilometres. Around **19% of derailmen
 ```text
 TR-09-Contactless-Track-Monitoring-System/
 │
-├── assets/                          # Schematics, charts, and institute logo
-│   ├── nmims_logo.png
-│   ├── fig1_system_architecture.png
-│   ├── fig2_sensor_fusion.png
-│   ├── fig3_project_timeline.png
-│   ├── fig4_team_structure.png
-│   ├── fig5_defect_detection_workflow.png
-│   └── fig6_cost_comparison.png
+├── TR-09_ITMS_Project_Report.docx    # Complete academic Word report (.docx)
+├── README.md                          # Documentation & Faculty Viva Guide
+├── config.py                          # Engineering constants, RDSO limits, defect labels
+├── requirements.txt                   # Minimal dependencies (Pillow, Matplotlib, etc.)
+├── main.py                            # Primary executable (Launches GUI or CLI)
+├── gui_app.py                         # Native Python Desktop Inspection GUI Application
+├── generate_dataset.py                # Generates synthetic rail inspection test frames
 │
-├── config.py                        # System parameters, RDSO tolerances, defect definitions
-├── main.py                          # Terminal simulation runner (easy CLI test)
-├── app.py                           # Interactive Streamlit Web Dashboard
-├── generate_dataset.py              # Generates synthetic rail inspection test frames
-├── requirements.txt                 # Python dependencies
-├── README.md                        # Documentation & Viva Guide
-│
-├── sensors/                         # Sensor Simulation & Driver Modules
+├── sensors/                           # Layer 1: Sensor Simulation & Hardware Drivers
 │   ├── __init__.py
-│   ├── laser_scanner.py             # Dual laser triangulation for gauge calculation
-│   ├── imu_sensor.py                # Bosch BMI270 9-axis IMU (Cross-level & Vibration)
-│   ├── gnss_sensor.py               # u-blox ZED-F9P RTK-GNSS + Dead-Reckoning fallback
-│   └── camera_stream.py             # Sony IMX477 camera frame acquisition
+│   ├── laser_scanner.py               # Dual laser triangulation for gauge calculation
+│   ├── imu_sensor.py                  # Bosch BMI270 9-axis IMU (Cross-level & Vibration)
+│   ├── gnss_sensor.py                 # u-blox ZED-F9P RTK-GNSS + Dead-Reckoning fallback
+│   └── camera_stream.py               # Sony IMX477 camera frame acquisition
 │
-├── core/                            # Edge Processing Engine
+├── core/                              # Layer 2: Edge Processing & Telemetry
 │   ├── __init__.py
-│   ├── geometry_fusion.py           # Laser + IMU Kalman fusion & RDSO tolerance checks
-│   ├── defect_detector.py           # CNN-LSTM visual defect classifier (Conf >= 0.91)
-│   └── telemetry.py                 # SQLite/CSV local buffer & LTE cloud dispatch
+│   ├── geometry_fusion.py             # Kalman fusion & RDSO tolerance checks
+│   ├── defect_detector.py             # CNN-LSTM visual classifier (Conf >= 0.91)
+│   └── telemetry.py                   # SQLite/CSV local buffer & LTE cloud dispatch
 │
-└── data/                            # Datasets and Runtime Logs
-    ├── test_frames/                 # High-resolution rail inspection test images
-    └── inspection_logs/             # Output CSV log & JSON defect records
+├── assets/                            # System schematics, timeline, and institute logo
+└── data/                              # Test inspection frames & output logs
 ```
 
 ---
 
-## 🚀 Quickstart & How to Run
+## 🚀 How to Run the Project (For Faculty Viva & Demonstrations)
+
+No web browsers or complex servers needed! This is a **100% native Python desktop application**.
 
 ### 1. Installation
 Clone the repository and install required packages:
@@ -102,24 +96,23 @@ cd TR-09-Contactless-Track-Monitoring-System
 pip install -r requirements.txt
 ```
 
-### 2. Generate Synthetic Test Dataset
-Generates sample rail frames with annotated defects:
-```bash
-python generate_dataset.py
-```
-
-### 3. Run Track Inspection in Terminal
-Simulates an inspection run along a 1.5 km railway siding:
+### 2. Launch the Desktop Inspection Software (Recommended)
+Simply run:
 ```bash
 python main.py
 ```
+This opens the **TR-09 Desktop Graphical Interface** window directly on your screen:
+- **Live Controls:** Click `▶ Start Run` to begin the trolley push. You can pause or adjust speed (Normal / Fast / Ultra).
+- **Gauge Readout:** Digital gauge meter showing measured gauge with instant color-coded status badges (`NORMAL`, `WARNING`, `CRITICAL`).
+- **Live Camera Display:** Displays rail surface imagery with red bounding boxes and AI confidence scores ($\ge 91\%$) for detected defects.
+- **Embedded Real-Time Graph:** Dynamic Matplotlib plot showing measured gauge curve versus Indian Railways upper (+6 mm) and lower (-3 mm) safety boundaries.
+- **One-Click Reports:** Direct buttons to open the generated CSV telemetry log or the Word project report.
 
-### 4. Launch Interactive Web Dashboard
-Launches the full live graphical inspection dashboard:
+### 3. Alternative: Run in Fast Terminal Mode
+If you prefer running a quick text simulation directly in your command line:
 ```bash
-streamlit run app.py
+python main.py --cli
 ```
-Open `http://localhost:8501` in your web browser.
 
 ---
 

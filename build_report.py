@@ -332,7 +332,7 @@ def build_word_report(output_filename="TR-09_ITMS_Project_Report.docx"):
         ["Fig 4 (7.1)", "Team Structure – Four Pods + Mentor", "10"],
         ["Fig 5 (11.3)", "Defect Detection Workflow (CNN-LSTM Model)", "15"],
         ["Fig 6 (11.3)", "Cost-per-Unit Comparison Across Inspection Approaches", "16"],
-        ["Fig 7 (13.1)", "Interactive Streamlit Web Dashboard Interface", "19"]
+        ["Fig 7 (13.1)", "TR-09 Native Desktop Inspection Interface", "19"]
     ]
     tbl_lof = doc.add_table(rows=1, cols=3)
     format_table(tbl_lof, [1.2, 4.3, 0.9], lof_headers, lof_data)
@@ -629,7 +629,7 @@ def build_word_report(output_filename="TR-09_ITMS_Project_Report.docx"):
     p_sw = doc.add_paragraph(
         "• Edge Runtime: JetPack 6.1, CUDA 12.4, TensorRT-optimised CNN-LSTM defect model (8.2 ms inference per frame).\n"
         "• Telemetry: MQTT 5 over LTE, CBOR-encoded payloads averaging 280 bytes per event.\n"
-        "• Cloud: InfluxDB 3 for time series, Cloudflare R2 for raw frames, Grafana 11 / Streamlit for dashboards.\n"
+        "• Cloud: InfluxDB 3 for time series, Cloudflare R2 for raw frames, Grafana 11 / Native Desktop Application for dashboards.\n"
         "• Local-First Resilience: 32 GB on-device buffer, auto-resync when connectivity returns.\n"
         "• Releases: GitHub Actions for OTA firmware and model rollout, signed and version-pinned."
     )
@@ -1013,8 +1013,8 @@ def build_word_report(output_filename="TR-09_ITMS_Project_Report.docx"):
         ["core/geometry_fusion.py", "Fusion Engine", "Computes Gauge, Cross-Level, and Spatial Twist over 3-meter moving chord"],
         ["core/defect_detector.py", "AI Vision Engine", "CNN-LSTM inference gate: emits critical alert only if Confidence >= 0.91"],
         ["core/telemetry.py", "Buffer & Dispatch", "Local CSV/JSON buffer + simulated Quectel LTE cellular cloud upload"],
-        ["main.py", "CLI Runner", "Terminal simulation of 1.5 km inspection run with colored event log"],
-        ["app.py", "Streamlit Dashboard", "Interactive web UI with live geometry curves, defect gallery, and CSV export"]
+        ["gui_app.py", "Desktop Inspection GUI", "Native Tkinter + Matplotlib interface with live gauge curve, camera view & event logs"],
+        ["main.py", "Primary Entry Point", "Launches Native Desktop GUI by default, or runs CLI mode via --cli"]
     ]
     tbl_t131 = doc.add_table(rows=1, cols=3)
     format_table(tbl_t131, [1.8, 1.8, 3.0], t131_headers, t131_data)
@@ -1048,8 +1048,8 @@ def build_word_report(output_filename="TR-09_ITMS_Project_Report.docx"):
         "To clone and run locally:\n"
         "  git clone https://github.com/soham3096/TR-09-Contactless-Track-Monitoring-System.git\n"
         "  pip install -r requirements.txt\n"
-        "  python main.py             # Runs CLI simulation\n"
-        "  streamlit run app.py       # Launches graphical dashboard",
+        "  python main.py             # Launches Native Desktop Inspection GUI\n"
+        "  python main.py --cli       # Fast terminal simulation mode",
         title="Open-Source GitHub Access & Execution"
     )
 
