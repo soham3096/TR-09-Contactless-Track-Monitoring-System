@@ -10,8 +10,8 @@ env/
 venv/
 ENV/
 
-# Streamlit
-.streamlit/
+# Presentations
+*.pptx
 
 # OS generated
 .DS_Store
