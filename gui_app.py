@@ -49,8 +49,11 @@ class TrackMonitoringApp:
         # Runtime State
         self.is_running = False
         self.is_paused = False
-        self.sim_thread = None
         self.step_delay = 0.08
+        self.current_km = 0.0
+        self.total_dist_km = 1.500
+        self.step_m = 25.0
+        self.after_id = None
         
         # View Mode: 'annotated', 'feature_map', 'raw'
         self.current_view_mode = "annotated"
@@ -333,14 +336,14 @@ class TrackMonitoringApp:
         btn_view_report = tk.Button(top_row, text="📄 Open Word Report (.docx)", font=("Calibri", 8, "bold"), bg="#2B6CB0", fg="#FFFFFF", relief=tk.FLAT, padx=6, command=self.open_word_report)
         btn_view_report.pack(side=tk.RIGHT, padx=3)
 
-        self.log_text = tk.Text(parent, height=4, font=("Consolas", 8.5), bg="#1A202C", fg="#E2E8F0", wrap=tk.WORD, relief=tk.FLAT)
+        self.log_text = tk.Text(parent, height=4, font=("Consolas", 9), bg="#1A202C", fg="#E2E8F0", wrap=tk.WORD, relief=tk.FLAT)
         self.log_text.pack(fill=tk.BOTH, expand=True)
         
         self.log_text.tag_config("INFO", foreground="#63B3ED")
         self.log_text.tag_config("NORMAL", foreground="#68D391")
         self.log_text.tag_config("WARNING", foreground="#F6AD55")
         self.log_text.tag_config("CRITICAL", foreground="#FC8181")
-        self.log_text.tag_config("DEFECT", foreground="#FEB2B2", font=("Consolas", 8.5, "bold"))
+        self.log_text.tag_config("DEFECT", foreground="#FEB2B2", font=("Consolas", 9, "bold"))
 
     def log_event(self, event_type, message, tag="INFO"):
         t_str = time.strftime("%H:%M:%S")
@@ -408,7 +411,7 @@ class TrackMonitoringApp:
             self.step_delay = 0.08
 
     # -------------------------------------------------------------
-    # SIMULATION LOOP
+    # SIMULATION LOOP (Event-driven via root.after for 100% thread safety)
     # -------------------------------------------------------------
     def start_inspection(self):
         if not self.is_running:
@@ -416,25 +419,32 @@ class TrackMonitoringApp:
             self.is_paused = False
             self.btn_start.configure(state=tk.DISABLED)
             self.btn_pause.configure(state=tk.NORMAL)
-            self.sim_thread = threading.Thread(target=self._run_simulation_loop, daemon=True)
-            self.sim_thread.start()
             self.log_event("RUN START", "Trolley inspection initiated. Real track image dataset active.", "INFO")
+            self._schedule_step()
         elif self.is_paused:
             self.is_paused = False
             self.btn_pause.configure(text="⏸ Pause", bg="#F57C00")
             self.log_event("RESUMED", "Trolley inspection resumed.", "INFO")
+            self._schedule_step()
 
     def pause_inspection(self):
         if self.is_running and not self.is_paused:
             self.is_paused = True
+            if self.after_id is not None:
+                self.root.after_cancel(self.after_id)
+                self.after_id = None
             self.btn_pause.configure(text="▶ Resume", bg="#2E7D32")
             self.log_event("PAUSED", "Trolley halted. Sensor acquisition paused.", "WARNING")
         elif self.is_running and self.is_paused:
             self.start_inspection()
 
     def reset_inspection(self):
+        if self.after_id is not None:
+            self.root.after_cancel(self.after_id)
+            self.after_id = None
         self.is_running = False
         self.is_paused = False
+        self.current_km = 0.0
         self.btn_start.configure(state=tk.NORMAL)
         self.btn_pause.configure(state=tk.DISABLED, text="⏸ Pause", bg="#F57C00")
         
@@ -466,39 +476,42 @@ class TrackMonitoringApp:
         self.lbl_cnt_ballast.configure(text=f"• Ballast Deficiencies: {self.defect_counts[3]}")
         self.lbl_cnt_squat.configure(text=f"• Rail Surface Squats: {self.defect_counts[4]}")
 
-    def _run_simulation_loop(self):
-        total_dist_km = 1.500
-        step_m = 25.0
-        current_km = 0.0
+    def _schedule_step(self):
+        if self.is_running and not self.is_paused:
+            delay_ms = max(5, int(self.step_delay * 1000))
+            self.after_id = self.root.after(delay_ms, self._step_simulation)
 
-        while self.is_running and current_km <= total_dist_km:
-            if self.is_paused:
-                time.sleep(0.1)
-                continue
+    def _step_simulation(self):
+        if not self.is_running or self.is_paused:
+            return
 
-            inject_gauge_widening = (0.840 <= current_km <= 0.880)
-            inject_cant = (0.420 <= current_km <= 0.450)
-            simulate_rtk_loss = (1.100 <= current_km <= 1.180)
+        if self.current_km > self.total_dist_km:
+            self._on_inspection_finished()
+            return
 
-            dl, dr = self.laser.read_measurements(current_km, inject_gauge_defect=inject_gauge_widening)
-            imu_data = self.imu.read_motion(current_km, inject_cant_defect=inject_cant)
-            gnss_data = self.gnss.update_position(step_m, force_rtk_loss=simulate_rtk_loss)
-            current_km = gnss_data["chainage_km"]
+        inject_gauge_widening = (0.840 <= self.current_km <= 0.880)
+        inject_cant = (0.420 <= self.current_km <= 0.450)
+        simulate_rtk_loss = (1.100 <= self.current_km <= 1.180)
 
-            geo = self.fusion.process_sample(dl, dr, imu_data, gnss_data)
-            
-            # Acquire Real Photographic Frame & Defect Analysis
-            frame_info = self.camera.capture_frame(current_km)
-            defect = self.detector.analyze_frame(frame_info)
-            defect["chainage_km"] = current_km
+        dl, dr = self.laser.read_measurements(self.current_km, inject_gauge_defect=inject_gauge_widening)
+        imu_data = self.imu.read_motion(self.current_km, inject_cant_defect=inject_cant)
+        gnss_data = self.gnss.update_position(self.step_m, force_rtk_loss=simulate_rtk_loss)
+        self.current_km = gnss_data["chainage_km"]
 
-            self.telemetry.log_record(geo, defect, lte_online=not simulate_rtk_loss)
-            self.root.after(0, self._update_ui_state, current_km, geo, defect, gnss_data)
+        geo = self.fusion.process_sample(dl, dr, imu_data, gnss_data)
+        
+        # Acquire Real Photographic Frame & Defect Analysis
+        frame_info = self.camera.capture_frame(self.current_km)
+        defect = self.detector.analyze_frame(frame_info)
+        defect["chainage_km"] = self.current_km
 
-            time.sleep(self.step_delay)
+        self.telemetry.log_record(geo, defect, lte_online=not simulate_rtk_loss)
+        self._update_ui_state(self.current_km, geo, defect, gnss_data)
 
-        if self.is_running:
-            self.root.after(0, self._on_inspection_finished)
+        if self.current_km <= self.total_dist_km:
+            self._schedule_step()
+        else:
+            self._on_inspection_finished()
 
     def _update_ui_state(self, current_km, geo, defect, gnss_data):
         self.lbl_chainage.configure(text=f"{current_km:.3f} km / 1.500 km")
@@ -586,13 +599,12 @@ class TrackMonitoringApp:
 
 
 def main():
-    root = tk.Tk()
     try:
         from ctypes import windll
         windll.shcore.SetProcessDpiAwareness(1)
     except Exception:
         pass
-
+    root = tk.Tk()
     app = TrackMonitoringApp(root)
     root.mainloop()
 
