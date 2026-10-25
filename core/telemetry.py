@@ -5,17 +5,6 @@ Telemetry & Local Buffer Engine (TR-09 ITMS)
 Author: Soham Bhosale, Arnav, Rudra Marathe
 Component: Quectel EC25 LTE Modem + Local SQLite/CSV Persistent Buffer
 Features: Offline buffering, auto-resync on reconnect, CBOR/MQTT event dispatch
-
-LOGIC (Easy explanation for Faculty Viva):
------------------------------------------
-1. Local-First Storage:
-   Every geometry sample and defect event is written immediately to a local
-   persistent CSV/JSON buffer. If cell signal drops in remote cuttings or
-   culverts, zero data is lost.
-2. Cloud Telemetry:
-   When LTE signal is active, events stream live to the web dashboard in < 4s.
-   When signal recovers after an outage, the buffer automatically back-fills
-   queued records to the cloud.
 =============================================================================
 """
 
@@ -50,7 +39,9 @@ class TelemetryEngine:
             "severity",
             "defect_detected",
             "defect_name",
-            "confidence"
+            "confidence",
+            "detection_method",
+            "damage_description"
         ]
         with open(self.csv_path, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
@@ -64,6 +55,8 @@ class TelemetryEngine:
         has_defect = defect_event.get("detected", False) if defect_event else False
         defect_name = defect_event.get("defect_name", "None") if defect_event else "None"
         confidence = defect_event.get("confidence", 0.0) if defect_event else 0.0
+        det_method = defect_event.get("detection_method", "N/A") if defect_event else "N/A"
+        damage_desc = defect_event.get("damage_description", "N/A") if defect_event else "N/A"
 
         row = [
             timestamp,
@@ -78,15 +71,15 @@ class TelemetryEngine:
             geometry_event["severity"],
             "YES" if has_defect else "NO",
             defect_name,
-            f"{confidence*100:.1f}%" if has_defect else "N/A"
+            f"{confidence*100:.1f}%" if has_defect else "N/A",
+            det_method,
+            damage_desc
         ]
 
-        # Write to local persistent CSV buffer
         with open(self.csv_path, "a", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(row)
 
-        # If a defect occurred, append to defect events JSON
         if has_defect:
             event_obj = {
                 "timestamp": timestamp,
@@ -96,11 +89,17 @@ class TelemetryEngine:
                 "gauge_mm": geometry_event["gauge_mm"],
                 "defect_name": defect_name,
                 "confidence": confidence,
+                "bounding_box": defect_event.get("bounding_box"),
+                "detection_method": det_method,
+                "damage_description": damage_desc,
+                "derailment_risk": defect_event.get("derailment_risk", "N/A"),
+                "pway_action": defect_event.get("pway_action", "N/A"),
                 "frame_path": defect_event.get("frame_path", ""),
+                "raw_frame_path": defect_event.get("raw_frame_path", ""),
+                "feature_map_path": defect_event.get("feature_map_path", ""),
                 "status": "UPLOADED" if lte_online else "BUFFERED_LOCALLY"
             }
             self.save_defect_json(event_obj)
-
             if not lte_online:
                 self.offline_queue.append(event_obj)
 
@@ -118,7 +117,6 @@ class TelemetryEngine:
             json.dump(events, f, indent=2)
 
     def flush_offline_buffer(self):
-        """Simulates cloud backfill when LTE connection is restored."""
         flushed_count = len(self.offline_queue)
         self.offline_queue.clear()
         return flushed_count
@@ -126,4 +124,4 @@ class TelemetryEngine:
 
 if __name__ == "__main__":
     telem = TelemetryEngine()
-    print(f"[TEST] Telemetry initialized. CSV log path: {telem.csv_path}")
+    print(f"[TEST] Telemetry initialized at: {telem.csv_path}")

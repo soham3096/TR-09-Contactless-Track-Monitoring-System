@@ -9,7 +9,7 @@ Team: Soham Bhosale | Arnav | Rudra Marathe
 Mentor: Prof. Chaitali Patil
 
 USAGE:
-  python main.py         -> Launches the Native Desktop Inspection GUI Application
+  python main.py         -> Launches Native Desktop Inspection GUI Application
   python main.py --cli   -> Runs fast simulation in Terminal CLI mode
 =============================================================================
 """
@@ -28,12 +28,12 @@ from core.telemetry import TelemetryEngine
 
 def run_cli_simulation(total_distance_km=1.5, step_meters=25.0, sleep_delay_sec=0.04):
     """Runs a simulated inspection run along 1.5 km railway siding in terminal."""
-    print("\n" + "="*75)
+    print("\n" + "="*80)
     print("  TR-09: INDIGENOUS CONTACTLESS INTEGRATED TRACK MONITORING SYSTEM")
     print("  SVKM's NMIMS MPSTME - Design Experience Course Project")
     print("  Team: Soham Bhosale | Arnav | Rudra Marathe (Guidance: Prof. Chaitali Patil)")
-    print("="*75)
-    print(f"[*] Initializing Sensor Subsystems on NVIDIA Jetson Edge Platform...")
+    print("="*80)
+    print(f"[*] Initializing Subsystems on NVIDIA Jetson Edge Platform...")
 
     laser = LaserScanner()
     imu = IMUSensor()
@@ -46,11 +46,11 @@ def run_cli_simulation(total_distance_km=1.5, step_meters=25.0, sleep_delay_sec=
     print(f"[+] Laser Scanners calibrated (Base Width: {config.RIG_FRAME_WIDTH_MM} mm)")
     print(f"[+] Bosch BMI270 9-Axis IMU connected (200 Hz Sampling)")
     print(f"[+] u-blox ZED-F9P RTK-GNSS synced (Start GPS: {config.GEO_START_LAT}, {config.GEO_START_LON})")
-    print(f"[+] Sony IMX477 CSI Camera ready (Defect Threshold: {config.CONFIDENCE_THRESHOLD*100}%)")
+    print(f"[+] Sony IMX477 CSI Camera ready (Real Track Image Dataset Active)")
     print(f"[+] Persistent Local Buffer active: {config.LOCAL_LOG_FILE}")
-    print("="*75)
+    print("="*80)
     print(f"[*] Starting Trolley Push Inspection: 0.000 km to {total_distance_km:.3f} km")
-    print(f"{'KM':<8} | {'GAUGE':<10} | {'DEV':<8} | {'CROSS-LVL':<10} | {'TWIST':<9} | {'GPS STATUS':<16} | {'DEFECT ALERT'}")
+    print(f"{'KM':<8} | {'GAUGE':<10} | {'DEV':<8} | {'CROSS-LVL':<10} | {'TWIST':<9} | {'GPS STATUS':<14} | {'DEFECT ALERT'}")
     print("-" * 95)
 
     defects_count = 0
@@ -68,8 +68,11 @@ def run_cli_simulation(total_distance_km=1.5, step_meters=25.0, sleep_delay_sec=
         current_km = gnss_data["chainage_km"]
 
         geo_result = fusion.process_sample(dl, dr, imu_data, gnss_data)
-        frame_path, simulated_class = camera.capture_frame(current_km)
-        defect_result = detector.analyze_frame(frame_path, simulated_class)
+        
+        # Real Camera Frame Acquisition & Defect Inference
+        frame_info = camera.capture_frame(current_km)
+        defect_result = detector.analyze_frame(frame_info)
+        
         telemetry.log_record(geo_result, defect_result, lte_online=not simulate_rtk_loss)
 
         gauge_str = f"{geo_result['gauge_mm']:.1f} mm"
@@ -82,20 +85,28 @@ def run_cli_simulation(total_distance_km=1.5, step_meters=25.0, sleep_delay_sec=
         if defect_result["detected"]:
             defects_count += 1
             defect_msg = f"[!] {defect_result['defect_name']} ({defect_result['confidence']*100:.1f}%)"
+            print(f"Km {current_km:<5.3f} | {gauge_str:<10} | {dev_str:<8} | {cross_str:<10} | {twist_str:<9} | {fix_str:<14} | {defect_msg}")
+            print(f"    |--> FAULT SPOT    : Bounding Box {defect_result['bounding_box']}")
+            print(f"    |--> HOW DETECTED  : {defect_result['detection_method']}")
+            print(f"    |--> TRACK DAMAGE  : {defect_result['damage_description']}")
+            print(f"    |--> DERAIL HAZARD : {defect_result['derailment_risk']}")
+            print(f"    |--> P-WAY ACTION  : {defect_result['pway_action']}")
         elif geo_result["severity"] != "NORMAL":
             warnings_count += 1
-            defect_msg = f"[*] {geo_result['status_description'][:32]}"
+            defect_msg = f"[*] {geo_result['status_description'][:28]}"
+            print(f"Km {current_km:<5.3f} | {gauge_str:<10} | {dev_str:<8} | {cross_str:<10} | {twist_str:<9} | {fix_str:<14} | {defect_msg}")
+        else:
+            print(f"Km {current_km:<5.3f} | {gauge_str:<10} | {dev_str:<8} | {cross_str:<10} | {twist_str:<9} | {fix_str:<14} | {defect_msg}")
 
-        print(f"Km {current_km:<5.3f} | {gauge_str:<10} | {dev_str:<8} | {cross_str:<10} | {twist_str:<9} | {fix_str:<16} | {defect_msg}")
         time.sleep(sleep_delay_sec)
 
     print("="*95)
     print("  INSPECTION RUN COMPLETE - SUMMARY OF FINDINGS")
     print("="*95)
     print(f"  • Total Track Inspected    : {current_km:.3f} km")
-    print(f"  • Total Defects Detected   : {defects_count} visual defects")
+    print(f"  • Real Visual Defects Found: {defects_count} defects detected on real track photos")
     print(f"  • Geometry Warnings Raised : {warnings_count} geometry out-of-tolerance events")
-    print(f"  • Output CSV Log File      : {config.LOCAL_LOG_FILE}")
+    print(f"  • Telemetry Buffer Saved   : {config.LOCAL_LOG_FILE}")
     print(f"  • Defect Database JSON     : {config.DEFECT_EVENTS_FILE}")
     print("="*95 + "\n")
 
@@ -104,7 +115,6 @@ def main():
     if "--cli" in sys.argv or "--headless" in sys.argv:
         run_cli_simulation()
     else:
-        # Default behavior: Launch Native Desktop GUI Application
         try:
             from gui_app import main as gui_main
             print("[*] Launching TR-09 Desktop GUI Application...")
