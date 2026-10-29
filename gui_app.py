@@ -387,6 +387,9 @@ class TrackMonitoringApp:
         btn_view_csv = tk.Button(top_row, text="📊 Open CSV Log", font=("Calibri", 8, "bold"), bg="#4A5568", fg="#FFFFFF", relief=tk.FLAT, padx=6, command=self.open_csv_log)
         btn_view_csv.pack(side=tk.RIGHT, padx=3)
 
+        btn_view_review = tk.Button(top_row, text="📑 Open Review Paper (.docx)", font=("Calibri", 8, "bold"), bg="#1B365D", fg="#FFFFFF", relief=tk.FLAT, padx=6, command=self.open_review_paper)
+        btn_view_review.pack(side=tk.RIGHT, padx=3)
+
         btn_view_report = tk.Button(top_row, text="📄 Open Word Report (.docx)", font=("Calibri", 8, "bold"), bg="#2B6CB0", fg="#FFFFFF", relief=tk.FLAT, padx=6, command=self.open_word_report)
         btn_view_report.pack(side=tk.RIGHT, padx=3)
 
@@ -900,6 +903,16 @@ class TrackMonitoringApp:
                 messagebox.showerror("Error", f"Could not open file: {e}")
         else:
             messagebox.showwarning("File Not Found", "Please run inspection first.")
+
+    def open_review_paper(self):
+        doc_file = os.path.join(config.BASE_DIR, "TR-09_Contactless_Track_Monitoring_Review_Paper.docx")
+        if os.path.exists(doc_file):
+            try:
+                os.startfile(doc_file)
+            except Exception as e:
+                messagebox.showerror("Error", f"Could not open file: {e}")
+        else:
+            messagebox.showwarning("File Not Found", "Review paper docx not found.")
 
     def open_word_report(self):
         doc_file = os.path.join(config.BASE_DIR, "TR-09_ITMS_Project_Report.docx")
